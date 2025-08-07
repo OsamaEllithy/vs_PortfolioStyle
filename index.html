@@ -465,8 +465,8 @@
                     <div class="file-item" data-file="json">data.json</div>
                     <div class="file-item" data-file="md">README.md</div>
                     <div class="file-item" data-file="php">index.php</div>
-                    <div class="file-item" data-file="go">main.cpp</div>
-                    <div class="file-item" data-file="sh">app.dart</div>
+                    <div class="file-item" data-file="go">main.go</div>
+                    <div class="file-item" data-file="sh">script.sh</div>
                 </div>
             </div>
 
@@ -538,167 +538,165 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tabsContainer = document.getElementById('tabs-container');
-            const tabContents = document.querySelectorAll('.tab-content');
-            const languageStatus = document.getElementById('language-status');
-            const terminalToggleBtn = document.getElementById('terminal-toggle-btn');
-            const closeTerminalBtn = document.getElementById('close-terminal-btn');
-            const terminalContainer = document.getElementById('terminal-container');
-            const terminalOutput = document.getElementById('terminal-output');
-            const explorerIcon = document.querySelector('.sidebar .fa-file-alt');
-            const explorerPanel = document.getElementById('explorer-panel');
-            const fileItems = document.querySelectorAll('.file-item');
+        const tabsContainer = document.getElementById('tabs-container');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const languageStatus = document.getElementById('language-status');
+        const terminalToggleBtn = document.getElementById('terminal-toggle-btn');
+        const closeTerminalBtn = document.getElementById('close-terminal-btn');
+        const terminalContainer = document.getElementById('terminal-container');
+        const terminalOutput = document.getElementById('terminal-output');
+        const explorerIcon = document.querySelector('.sidebar .fa-file-alt');
+        const explorerPanel = document.getElementById('explorer-panel');
+        const fileItems = document.querySelectorAll('.file-item');
+        const topTerminalToggleBtn = document.getElementById('top-terminal-toggle');
+
+        const files = Array.from(fileItems).map(item => ({
+            id: item.dataset.file,
+            name: item.textContent,
+            isOpen: false
+        }));
+
+        terminalOutput.addEventListener('click', (e) => {
+            if (e.target.classList.contains('fake-link')) {
+                const url = e.target.textContent;
+                window.open(url, '_blank');
+            }
+        });
+
+        function renderTabs() {
+            tabsContainer.innerHTML = '';
+            const openFiles = files.filter(f => f.isOpen);
+            let activeFileId = null;
+
+            const currentActiveTab = document.querySelector('.tab.active');
+            if (currentActiveTab) {
+                activeFileId = currentActiveTab.dataset.content;
+            } else if (openFiles.length > 0) {
+                activeFileId = openFiles[0].id;
+            }
+
+            openFiles.forEach(file => {
+                const tabDiv = document.createElement('div');
+                tabDiv.className = `tab visible ${file.id}-tab`;
+                tabDiv.setAttribute('data-content', file.id);
+                tabDiv.innerHTML = `${file.name} <i class="fas fa-times"></i>`;
+
+                const closeIcon = tabDiv.querySelector('i');
+                closeIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    closeTab(tabDiv);
+                });
+
+                tabDiv.addEventListener('click', () => {
+                    activateTab(file.id);
+                });
+
+                tabsContainer.appendChild(tabDiv);
+            });
             
-            const topTerminalToggleBtn = document.getElementById('top-terminal-toggle');
-
-            const files = Array.from(fileItems).map(item => ({
-                id: item.dataset.file,
-                name: item.textContent,
-                isOpen: false
-            }));
-
-            terminalOutput.addEventListener('click', (e) => {
-                if (e.target.classList.contains('fake-link')) {
-                    const url = e.target.textContent;
-                    window.open(url, '_blank');
-                }
-            });
-
-            function renderTabs() {
-                tabsContainer.innerHTML = '';
-                const openFiles = files.filter(f => f.isOpen);
-                let activeFileId = null;
-
-                const currentActiveTab = document.querySelector('.tab.active');
-                if (currentActiveTab) {
-                    activeFileId = currentActiveTab.dataset.content;
-                } else if (openFiles.length > 0) {
-                    activeFileId = openFiles[0].id;
-                }
-
-                openFiles.forEach(file => {
-                    const tabDiv = document.createElement('div');
-                    tabDiv.className = `tab visible ${file.id}-tab`;
-                    tabDiv.setAttribute('data-content', file.id);
-                    tabDiv.innerHTML = `${file.name} <i class="fas fa-times"></i>`;
-
-                    const closeIcon = tabDiv.querySelector('i');
-                    closeIcon.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        closeTab(tabDiv);
-                    });
-
-                    tabDiv.addEventListener('click', () => {
-                        activateTab(file.id);
-                    });
-
-                    tabsContainer.appendChild(tabDiv);
-                });
-                
-                if (activeFileId) {
-                    activateTab(activeFileId);
-                } else {
-                    tabContents.forEach(c => c.classList.remove('active-content'));
-                    languageStatus.textContent = 'Text';
-                }
-            }
-
-            function activateTab(fileId) {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                const newActiveTab = document.querySelector(`.tab[data-content="${fileId}"]`);
-                if (newActiveTab) {
-                    newActiveTab.classList.add('active');
-                }
-
+            if (activeFileId) {
+                activateTab(activeFileId);
+            } else {
                 tabContents.forEach(c => c.classList.remove('active-content'));
-                const newActiveContent = document.getElementById(`${fileId}-content`);
-                if (newActiveContent) {
-                    newActiveContent.classList.add('active-content');
-                }
+                languageStatus.textContent = 'Text';
+            }
+        }
 
-                languageStatus.textContent = fileId.toUpperCase();
-
-                document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active-file'));
-                const newActiveFileItem = document.querySelector(`.file-item[data-file="${fileId}"]`);
-                if (newActiveFileItem) {
-                    newActiveFileItem.classList.add('active-file');
-                }
+        function activateTab(fileId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            const newActiveTab = document.querySelector(`.tab[data-content="${fileId}"]`);
+            if (newActiveTab) {
+                newActiveTab.classList.add('active');
             }
 
-            function closeTab(tabToClose) {
-                const fileId = tabToClose.dataset.content;
-                const fileToClose = files.find(file => file.id === fileId);
-
-                if (fileToClose) {
-                    fileToClose.isOpen = false;
-                    const wasActive = tabToClose.classList.contains('active');
-                    const tabs = Array.from(document.querySelectorAll('.tab.visible'));
-                    const closedTabIndex = tabs.indexOf(tabToClose);
-                    tabToClose.remove();
-
-                    if (wasActive) {
-                        let newActiveTab = null;
-                        if (tabs[closedTabIndex + 1]) {
-                            newActiveTab = tabs[closedTabIndex + 1];
-                        } else if (tabs[closedTabIndex - 1]) {
-                            newActiveTab = tabs[closedTabIndex - 1];
-                        }
-
-                        if (newActiveTab) {
-                            activateTab(newActiveTab.dataset.content);
-                        } else {
-                            tabContents.forEach(c => c.classList.remove('active-content'));
-                            languageStatus.textContent = 'Text';
-                        }
-                    }
-
-                    document.querySelector(`.file-item[data-file="${fileId}"]`)?.classList.remove('active-file');
-                }
+            tabContents.forEach(c => c.classList.remove('active-content'));
+            const newActiveContent = document.getElementById(`${fileId}-content`);
+            if (newActiveContent) {
+                newActiveContent.classList.add('active-content');
             }
 
-            fileItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    const fileId = item.dataset.file;
-                    const fileToOpen = files.find(file => file.id === fileId);
-                    if (fileToOpen && !fileToOpen.isOpen) {
-                        fileToOpen.isOpen = true;
-                        renderTabs();
+            languageStatus.textContent = fileId.toUpperCase();
+
+            document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active-file'));
+            const newActiveFileItem = document.querySelector(`.file-item[data-file="${fileId}"]`);
+            if (newActiveFileItem) {
+                newActiveFileItem.classList.add('active-file');
+            }
+        }
+
+        function closeTab(tabToClose) {
+            const fileId = tabToClose.dataset.content;
+            const fileToClose = files.find(file => file.id === fileId);
+
+            if (fileToClose) {
+                fileToClose.isOpen = false;
+                const wasActive = tabToClose.classList.contains('active');
+                const tabs = Array.from(document.querySelectorAll('.tab.visible'));
+                const closedTabIndex = tabs.indexOf(tabToClose);
+                tabToClose.remove();
+
+                if (wasActive) {
+                    let newActiveTab = null;
+                    if (tabs[closedTabIndex + 1]) {
+                        newActiveTab = tabs[closedTabIndex + 1];
+                    } else if (tabs[closedTabIndex - 1]) {
+                        newActiveTab = tabs[closedTabIndex - 1];
                     }
-                    activateTab(fileId);
-                });
-            });
 
-            explorerIcon.addEventListener('click', () => {
-                explorerIcon.classList.toggle('active-icon');
-                explorerPanel.classList.toggle('expanded');
-            });
-
-            terminalToggleBtn.addEventListener('click', () => {
-                terminalContainer.classList.toggle('open');
-                if (terminalContainer.classList.contains('open')) {
-                    simulateTerminalOutput();
-                } else {
-                    terminalOutput.textContent = '';
+                    if (newActiveTab) {
+                        activateTab(newActiveTab.dataset.content);
+                    } else {
+                        tabContents.forEach(c => c.classList.remove('active-content'));
+                        languageStatus.textContent = 'Text';
+                    }
                 }
-            });
 
-            topTerminalToggleBtn.addEventListener('click', () => {
-                terminalContainer.classList.toggle('open');
-                if (terminalContainer.classList.contains('open')) {
-                    simulatePortfolioOutput();
-                } else {
-                    terminalOutput.textContent = '';
+                document.querySelector(`.file-item[data-file="${fileId}"]`)?.classList.remove('active-file');
+            }
+        }
+
+        fileItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const fileId = item.dataset.file;
+                const fileToOpen = files.find(file => file.id === fileId);
+                if (fileToOpen && !fileToOpen.isOpen) {
+                    fileToOpen.isOpen = true;
+                    renderTabs();
                 }
+                activateTab(fileId);
             });
+        });
 
-            closeTerminalBtn.addEventListener('click', () => {
-                terminalContainer.classList.remove('open');
+        explorerIcon.addEventListener('click', () => {
+            explorerIcon.classList.toggle('active-icon');
+            explorerPanel.classList.toggle('expanded');
+        });
+
+        terminalToggleBtn.addEventListener('click', () => {
+            terminalContainer.classList.toggle('open');
+            if (terminalContainer.classList.contains('open')) {
+                simulateTerminalOutput();
+            } else {
                 terminalOutput.textContent = '';
-            });
+            }
+        });
 
-            function simulateTerminalOutput() {
-                const fakeOutput = `
+        topTerminalToggleBtn.addEventListener('click', () => {
+            terminalContainer.classList.toggle('open');
+            if (terminalContainer.classList.contains('open')) {
+                simulatePortfolioOutput();
+            } else {
+                terminalOutput.textContent = '';
+            }
+        });
+
+        closeTerminalBtn.addEventListener('click', () => {
+            terminalContainer.classList.remove('open');
+            terminalOutput.textContent = '';
+        });
+
+        function simulateTerminalOutput() {
+            const fakeOutput = `
 > C:\\Users\\user\\projects\\my-project> npm start
 
 > my-project@1.0.0 start
@@ -706,44 +704,48 @@
 
 Server is running at <span class="fake-link">http://localhost:3000</span>
 `;
-                let i = 0;
-                terminalOutput.innerHTML = '';
-                const interval = setInterval(() => {
-                    if (i < fakeOutput.length) {
-                        terminalOutput.innerHTML += fakeOutput.charAt(i);
-                        terminalOutput.scrollTop = terminalOutput.scrollHeight;
-                        i++;
-                    } else {
-                        clearInterval(interval);
-                    }
-                }, 10);
-            }
-            
-            function simulatePortfolioOutput() {
-                const portfolioOutput = `
+            let i = 0;
+            terminalOutput.innerHTML = '';
+            const interval = setInterval(() => {
+                if (i < fakeOutput.length) {
+                    terminalOutput.innerHTML += fakeOutput.charAt(i);
+                    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                    i++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 10);
+        }
+        
+        function simulatePortfolioOutput() {
+            const portfolioOutput = `
 > C:\\Users\\User> Welcome!
 > C:\\Users\\User> This is my portfolio styled as VS Code.
 > C:\\Users\\User> You can explore my projects in the file explorer on the left.
 > C:\\Users\\User> Thank you for visiting!
 `;
-                let i = 0;
-                terminalOutput.innerHTML = '';
-                const interval = setInterval(() => {
-                    if (i < portfolioOutput.length) {
-                        terminalOutput.innerHTML += portfolioOutput.charAt(i);
-                        terminalOutput.scrollTop = terminalOutput.scrollHeight;
-                        i++;
-                    } else {
-                        clearInterval(interval);
-                    }
-                }, 10);
-            }
+            let i = 0;
+            terminalOutput.innerHTML = '';
+            const interval = setInterval(() => {
+                if (i < portfolioOutput.length) {
+                    terminalOutput.innerHTML += portfolioOutput.charAt(i);
+                    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                    i++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 10);
+        }
 
-            const initialFile = files[0];
-            initialFile.isOpen = true;
-            renderTabs();
-            activateTab(initialFile.id);
-        });
+        // الكود الجديد اللي هيشغل كل حاجة أول ما الصفحة تفتح
+        explorerIcon.classList.add('active-icon');
+        explorerPanel.classList.add('expanded');
+        const initialFile = files[0];
+        initialFile.isOpen = true;
+        renderTabs();
+        activateTab(initialFile.id);
+        terminalContainer.classList.add('open');
+        simulatePortfolioOutput();
     </script>
 </body>
 </html>
